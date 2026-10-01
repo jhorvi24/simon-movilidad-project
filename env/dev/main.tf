@@ -26,6 +26,9 @@ locals {
   # Si no se pasa una imagen (primer apply), usa un placeholder publico para que
   # el servicio ECS arranque. El pipeline luego pasa la URL real de ECR + tag.
   container_image = var.container_image != "" ? var.container_image : "public.ecr.aws/nginx/nginx:stable-alpine"
+
+  # ARN deterministico del OIDC provider de GitHub ya existente en la cuenta.
+  oidc_provider_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
 }
 
 module "networking" {
@@ -40,10 +43,11 @@ module "networking" {
 module "iam" {
   source = "../../modulos/iam"
 
-  name_prefix          = local.name_prefix
-  project_name         = var.project_name
-  create_oidc_provider = true # dev crea el OIDC provider (uno por cuenta)
-  github_repository    = var.github_repository
+  name_prefix                = local.name_prefix
+  project_name               = var.project_name
+  create_oidc_provider       = false # reutiliza el OIDC provider ya existente en la cuenta
+  existing_oidc_provider_arn = local.oidc_provider_arn
+  github_repository          = var.github_repository
   github_subject_claims = [
     "environment:dev",
     "ref:refs/heads/main",

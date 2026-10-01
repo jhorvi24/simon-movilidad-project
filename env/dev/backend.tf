@@ -8,7 +8,7 @@
 
 terraform {
   backend "s3" {
-    bucket       = "simon-movilidad-tfstate-dev-ACCOUNT_ID"
+    bucket       = "simon-movilidad-tfstate-dev-001239102331"
     key          = "ecs-app/dev/terraform.tfstate"
     region       = "us-east-1"
     encrypt      = true
