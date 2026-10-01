@@ -1,0 +1,128 @@
+<mxfile host="app.diagrams.net" version="24.0.0">
+  <diagram name="Arquitectura Simon Movilidad" id="simon-arch">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="1180" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="title" value="Simón Movilidad — Pipeline CI/CD + Arquitectura AWS (multi-AZ)" style="text;html=1;align=center;fontSize=18;fontStyle=1;fontColor=#232F3E;" vertex="1" parent="1">
+          <mxGeometry x="420" y="15" width="860" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="cicd_band" value="CI/CD" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontStyle=1;verticalAlign=top;align=left;fontColor=#666666;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="60" y="60" width="1580" height="230" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_dev" value="Dev" style="shape=mxgraph.aws4.user;sketch=0;html=1;fillColor=#232F3E;strokeColor=none;verticalLabelPosition=bottom;labelPosition=center;verticalAlign=top;align=center;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="90" y="140" width="55" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="gh_repo" value="GitHub Repo&#10;modulos/ · env/dev · env/prod · app/" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="210" y="135" width="200" height="65" as="geometry"/>
+        </mxCell>
+        <mxCell id="j_sec" value="JOB 1 · security&#10;&#10;gitleaks (secretos)&#10;tflint (lint)&#10;checkov (misconfig)&#10;terraform fmt / validate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;verticalAlign=top;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="470" y="100" width="200" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="j_dev" value="JOB 2 · deploy-dev  (automático)&#10;&#10;• OIDC AssumeRole&#10;• docker build + push a ECR&#10;• terraform apply (dev)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;verticalAlign=top;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="720" y="100" width="230" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="gate" value="Aprobación manual&#10;(Environment prod:&#10;required reviewers)" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="985" y="120" width="130" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="j_prod" value="JOB 3 · deploy-prod&#10;&#10;• OIDC AssumeRole&#10;• build + push a ECR&#10;• terraform apply (prod)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;verticalAlign=top;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="1150" y="100" width="220" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="oidc" value="GitHub OIDC → AWS STS&#10;sts:AssumeRoleWithWebIdentity&#10;(sin llaves estáticas)" style="shape=mxgraph.aws4.identity_and_access_management;sketch=0;html=1;fillColor=#DD344C;strokeColor=none;verticalLabelPosition=bottom;labelPosition=center;verticalAlign=top;align=center;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1440" y="130" width="60" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="ce1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" parent="1" source="t_dev" target="gh_repo"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ce2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" parent="1" source="gh_repo" target="j_sec"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ce3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" parent="1" source="j_sec" target="j_dev"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ce4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" parent="1" source="j_dev" target="gate"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ce5" value="aprueba" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" parent="1" source="gate" target="j_prod"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ce6" value="token" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;" edge="1" parent="1" source="j_dev" target="oidc"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="aws" value="AWS · us-east-1   (misma plantilla aplicada a DEV y PROD)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#ED7100;fontStyle=1;fontColor=#ED7100;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="320" width="1580" height="820" as="geometry"/>
+        </mxCell>
+        <mxCell id="boot" value="bootstrap  (se corre 1 vez por cuenta — barato, sin cómputo)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="90" y="360" width="560" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="s3state" value="S3 tfstate&#10;versioning · KMS · lockfile" style="shape=mxgraph.aws4.simple_storage_service;sketch=0;html=1;fillColor=#7AA116;strokeColor=none;verticalLabelPosition=bottom;labelPosition=center;verticalAlign=top;align=center;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="150" y="395" width="55" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="oidcrole" value="Roles OIDC deploy&#10;dev / prod · mín. privilegio" style="shape=mxgraph.aws4.role;sketch=0;html=1;fillColor=#DD344C;strokeColor=none;verticalLabelPosition=bottom;labelPosition=center;verticalAlign=top;align=center;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="430" y="395" width="55" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="ecr" value="ECR&#10;scan on push" style="shape=mxgraph.aws4.elastic_container_registry;sketch=0;html=1;fillColor=#ED7100;strokeColor=none;verticalLabelPosition=bottom;labelPosition=center;verticalAlign=top;align=center;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="710" y="385" width="55" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="cw" value="CloudWatch&#10;Logs · Container Insights · Flow Logs" style="shape=mxgraph.aws4.cloudwatch;sketch=0;html=1;fillColor=#E7157B;strokeColor=none;verticalLabelPosition=bottom;labelPosition=center;verticalAlign=top;align=center;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="900" y="385" width="55" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="user" value="Usuario final" style="shape=mxgraph.aws4.user;sketch=0;html=1;fillColor=#232F3E;strokeColor=none;verticalLabelPosition=bottom;labelPosition=center;verticalAlign=top;align=center;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1480" y="385" width="55" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="igw" value="Internet Gateway" style="shape=mxgraph.aws4.internet_gateway;sketch=0;html=1;fillColor=#8C4FFF;strokeColor=none;verticalLabelPosition=bottom;labelPosition=center;verticalAlign=top;align=center;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1230" y="385" width="55" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="ce_user_igw" value="HTTP :80" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" parent="1" source="user" target="igw"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="vpc" value="VPC   (dev 10.10.0.0/16 · prod 10.20.0.0/16)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#248814;fontStyle=1;fontColor=#248814;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="90" y="500" width="1500" height="610" as="geometry"/>
+        </mxCell>
+        <mxCell id="alb" value="Application Load Balancer  (HTTP :80)&#10;SG: entrada :80 desde Internet · reparte entre AZs" style="shape=mxgraph.aws4.elastic_load_balancing;sketch=0;html=1;fillColor=#8C4FFF;strokeColor=none;verticalLabelPosition=bottom;labelPosition=center;verticalAlign=top;align=center;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="760" y="540" width="70" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="ce_igw_alb" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" parent="1" source="igw" target="alb"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="azA" value="Availability Zone A  (us-east-1a)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f2fbff;strokeColor=#0073bb;fontStyle=1;fontColor=#0073bb;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="120" y="650" width="700" height="430" as="geometry"/>
+        </mxCell>
+        <mxCell id="azB" value="Availability Zone B  (us-east-1b)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f2fbff;strokeColor=#0073bb;fontStyle=1;fontColor=#0073bb;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="860" y="650" width="700" height="430" as="geometry"/>
+        </mxCell>
+        <mxCell id="pubA" value="Subnet pública /24" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f4f8;strokeColor=#6c8ebf;verticalAlign=top;align=left;spacingLeft=8;spacingTop=4;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="140" y="690" width="660" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="natA" value="NAT GW&#10;(prod: 1 por AZ)" style="shape=mxgraph.aws4.nat_gateway;sketch=0;html=1;fillColor=#8C4FFF;strokeColor=none;verticalLabelPosition=bottom;labelPosition=center;verticalAlign=top;align=center;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="400" y="720" width="50" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="pubB" value="Subnet pública /24" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f4f8;strokeColor=#6c8ebf;verticalAlign=top;align=left;spacingLeft=8;spacingTop=4;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="880" y="690" width="660" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="natB" value="NAT GW&#10;(prod: 1 por AZ)" style="shape=mxgraph.aws4.nat_gateway;sketch=0;html=1;fillColor=#8C4FFF;strokeColor=none;verticalLabelPosition=bottom;labelPosition=center;verticalAlign=top;align=center;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="720" width="50" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="privA" value="Subnet privada /24  (sin IP pública)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff0e6;strokeColor=#d79b00;verticalAlign=top;align=left;spacingLeft=8;spacingTop=4;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="140" y="830" width="660" height="220" as="geometry"/>
+        </mxCell>
+        <mxCell id="taskA1" value="Task nginx :8080&#10;no-root" style="shape=mxgraph.aws4.task;sketch=0;html=1;fillColor=#ED7100;strokeColor=none;verticalLabelPosition=bottom;labelPosition=center;verticalAlign=top;align=center;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="230" y="890" width="55" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="taskA2" value="Task" style="shape=mxgraph.aws4.task;sketch=0;html=1;fillColor=#ED7100;strokeColor=none;verticalLabelPosition=bottom;labelPosition=center;verticalAlign=top;align=center;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="420" y="890" width="55" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="sgA" value="SG tareas: entrada :8080 SOLO desde el SG del ALB" style="text;html=1;align=left;fontSize=10;fontStyle=2;fontColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="150" y="1010" width="640" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="privB" value="Subnet privada /24  (sin IP pública)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff0e6;strokeColor=#d79b00;verticalAlign=top;align=left;spacingLeft=8;spacingTop=4;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="880" y="830" width="660" height="220" as="geometry"/>
+        </mxCell>
+        <mxCell id="taskB1" value="Task nginx :8080&#10;no-root" style="shape=mxgraph.aws4.task;sketch=0;html=1;fillColor=#ED7100;strokeColor=none;verticalLabelPosition=bottom;labelPosition=center;verticalAlign=top;align=center;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="970" y="890" width="55" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="taskB2" value="Task" style="shape=mxgraph.aws4.task;sketch=0;html=1;fillColor=#ED7100;strokeColor=none;verticalLabelPosition=bottom;labelPosition=center;verticalAlign=top;align=center;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1160" y="890" width="55" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="sgB" value="SG tareas: entrada :8080 SOLO desde el SG del ALB" style="text;html=1;align=left;fontSize=10;fontStyle=2;fontColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="890" y="1010" width="640" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="ecs_lbl" value="ECS Fargate Service (desired/min/max) + Application Auto Scaling (target tracking CPU/Mem) — tareas distribuidas en ambas AZ" style="text;html=1;align=center;fontSize=11;fontStyle=1;fontColor=#ED7100;" vertex="1" parent="1">
+          <mxGeometry x="340" y="1055" width="1000" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="ce_alb_a1" value=":8080" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" parent="1" source="alb" target="taskA1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ce_alb_b1" value=":8080" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" parent="1" source="alb" target="taskB1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ce_a_nat" value="salida" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;" edge="1" parent="1" source="taskA1" target="natA"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ce_b_nat" value="salida" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;" edge="1" parent="1" source="taskB1" target="natB"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ce_a_ecr" value="pull imagen" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;" edge="1" parent="1" source="natA" target="ecr"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="leg" value="— línea sólida: tráfico de usuario / sincrónico      - - línea punteada: control / salida (pull, logs, OIDC)" style="text;html=1;align=left;fontSize=10;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="90" y="1115" width="900" height="20" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

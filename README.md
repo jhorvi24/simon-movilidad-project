@@ -21,22 +21,17 @@ Trust**.
 
 ## Arquitectura
 
-```
-Internet
-   │  HTTP :80
-   ▼
-┌─────────────┐   subnets públicas
-│     ALB     │
-└─────────────┘
-   │  :8080 (solo desde el SG del ALB)
-   ▼
-┌─────────────────────────┐   subnets privadas (sin IP pública)
-│  ECS Fargate (nginx)    │ ← Auto Scaling por CPU/memoria
-└─────────────────────────┘
-   │ salida vía NAT
-   ▼
-ECR (imágenes) · CloudWatch (logs)
-```
+![Arquitectura Simón Movilidad: pipeline CI/CD + infraestructura AWS multi-AZ](docs/arquitectura.png)
+
+El tráfico del usuario entra por el ALB (HTTP :80) en las subnets públicas y se
+reparte entre **dos zonas de disponibilidad**. Las tareas de ECS Fargate corren
+en subnets **privadas** (sin IP pública) de ambas AZs y solo aceptan tráfico
+desde el ALB (:8080). La salida a internet (pull de ECR, logs) va por NAT
+Gateway. El pipeline de GitHub Actions valida (seguridad), despliega dev
+automáticamente y prod tras aprobación manual, usando OIDC para credenciales
+temporales (sin llaves estáticas).
+
+> El diagrama editable está en [`docs/arquitectura.drawio`](docs/arquitectura.drawio) (abrir con draw.io).
 
 ## Estructura del repositorio
 
