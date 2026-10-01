@@ -10,8 +10,20 @@ name: CI/CD - Terraform + ECS
 on:
   push:
     branches: [main]
+    # No disparar el pipeline por cambios que no afectan infra ni app
+    # (documentacion, diagramas, licencias). Evita apply/approval innecesarios.
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "LICENSE"
+      - ".gitignore"
   pull_request:
     branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "LICENSE"
+      - ".gitignore"
 
 # OIDC requiere permiso id-token. contents:read para checkout.
 permissions:

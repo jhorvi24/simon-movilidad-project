@@ -24,3 +24,6 @@ override.tf.json
 Thumbs.db
 .idea/
 .vscode/
+
+# Material local que NO se versiona (guiones de video, notas de apoyo, etc.)
+_local/
