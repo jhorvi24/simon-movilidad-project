@@ -1,0 +1,20 @@
+# Configuracion de gitleaks: extiende el ruleset por defecto y excluye falsos
+# positivos conocidos (ej. el ARN determinista del OIDC provider, placeholders).
+
+title = "simon-movilidad gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Falsos positivos y placeholders conocidos"
+regexes = [
+  # Placeholder de account id en backends/docs
+  '''ACCOUNT_ID''',
+  # ARN del OIDC provider (no es un secreto)
+  '''oidc-provider/token\.actions\.githubusercontent\.com''',
+]
+paths = [
+  '''\.terraform/.*''',
+  '''.*\.tfstate.*''',
+]

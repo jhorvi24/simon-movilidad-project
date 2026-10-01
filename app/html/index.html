@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simón Movilidad</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <style>
+    :root {
+      --bg-1: #0f0c29;
+      --bg-2: #302b63;
+      --bg-3: #24243e;
+      --accent: #00e5ff;
+      --accent-2: #7c4dff;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      color: #f5f7ff;
+      background: linear-gradient(-45deg, var(--bg-1), var(--bg-2), var(--bg-3), var(--bg-1));
+      background-size: 400% 400%;
+      animation: gradient 16s ease infinite;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    @keyframes gradient {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .card {
+      position: relative;
+      text-align: center;
+      padding: 3.5rem 3rem;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+      max-width: 540px;
+      animation: rise 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(28px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid rgba(0, 229, 255, 0.4);
+      border-radius: 999px;
+      padding: 0.35rem 0.9rem;
+      margin-bottom: 1.6rem;
+    }
+
+    h1 {
+      font-size: 2.9rem;
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 1rem;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.lead {
+      font-size: 1.1rem;
+      color: rgba(245, 247, 255, 0.78);
+      line-height: 1.6;
+      margin-bottom: 2rem;
+    }
+
+    .stack {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .chip {
+      font-size: 0.8rem;
+      padding: 0.45rem 0.9rem;
+      border-radius: 10px;
+      background: rgba(124, 77, 255, 0.18);
+      border: 1px solid rgba(124, 77, 255, 0.35);
+      color: #d9ccff;
+    }
+
+    .dot {
+      display: inline-block;
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: #00e676;
+      box-shadow: 0 0 10px #00e676;
+      margin-right: 6px;
+      animation: pulse 1.6s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    footer {
+      margin-top: 2rem;
+      font-size: 0.8rem;
+      color: rgba(245, 247, 255, 0.5);
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <span class="badge">Despliegue continuo · AWS ECS</span>
+    <h1>Simón Movilidad</h1>
+    <p class="lead">
+      <span class="dot"></span>Aplicación en línea, desplegada con un pipeline
+      seguro de GitHub Actions sobre AWS Fargate.
+    </p>
+    <div class="stack">
+      <span class="chip">Terraform</span>
+      <span class="chip">ECS Fargate</span>
+      <span class="chip">ALB</span>
+      <span class="chip">OIDC</span>
+      <span class="chip">Zero Trust</span>
+    </div>
+    <footer>Infraestructura como código · us-east-1</footer>
+  </main>
+</body>
+</html>

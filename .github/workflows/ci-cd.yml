@@ -1,0 +1,224 @@
+name: CI/CD - Terraform + ECS
+
+# Flujo:
+#   - Pull Request  -> seguridad (gitleaks, tflint, checkov) + terraform plan (dev)
+#   - Push a main   -> seguridad + build/push imagen + apply DEV + (aprobacion) apply PROD
+#
+# Credenciales AWS via OIDC (sin llaves estaticas). El rol a asumir se construye
+# con el AWS_ACCOUNT_ID (secret) y la region.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# OIDC requiere permiso id-token. contents:read para checkout.
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  PROJECT_NAME: simon-movilidad
+  TF_VERSION: "1.10.5"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1) SEGURIDAD: se ejecuta siempre. Si algo falla, no hay deploy.
+  # ---------------------------------------------------------------------------
+  security:
+    name: Security scans
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # gitleaks necesita el historial completo
+
+      - name: Gitleaks (secret scanning)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform fmt check
+        run: terraform fmt -check -recursive
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: latest
+
+      - name: TFLint init
+        run: tflint --init
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: TFLint (lint IaC)
+        run: tflint --recursive --config "$(pwd)/.tflint.hcl"
+
+      - name: Checkov (IaC misconfig scan)
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: .
+          framework: terraform,dockerfile
+          soft_fail: false
+          output_format: cli
+          download_external_modules: false
+
+  # ---------------------------------------------------------------------------
+  # 2) PLAN en PRs: valida los cambios sin aplicarlos (dev).
+  # ---------------------------------------------------------------------------
+  plan-dev:
+    name: Terraform plan (dev)
+    needs: security
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ env.PROJECT_NAME }}-dev-gha-deploy
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform init (dev)
+        working-directory: env/dev
+        run: |
+          terraform init \
+            -backend-config="bucket=${PROJECT_NAME}-tfstate-dev-${{ secrets.AWS_ACCOUNT_ID }}"
+
+      - name: Terraform plan (dev)
+        working-directory: env/dev
+        run: terraform plan -input=false
+
+  # ---------------------------------------------------------------------------
+  # 3) DEPLOY DEV: build/push imagen + apply (solo en push a main).
+  # ---------------------------------------------------------------------------
+  deploy-dev:
+    name: Deploy dev
+    needs: security
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: dev
+    outputs:
+      image: ${{ steps.build.outputs.image }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ env.PROJECT_NAME }}-dev-gha-deploy
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      # Primer apply: crea ECR y demas infra con la imagen placeholder.
+      - name: Terraform init (dev)
+        working-directory: env/dev
+        run: |
+          terraform init \
+            -backend-config="bucket=${PROJECT_NAME}-tfstate-dev-${{ secrets.AWS_ACCOUNT_ID }}"
+
+      - name: Terraform apply - infra (dev)
+        working-directory: env/dev
+        run: terraform apply -auto-approve -input=false
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & push image
+        id: build
+        working-directory: app
+        run: |
+          ECR_URL=$(cd ../env/dev && terraform output -raw ecr_repository_url)
+          IMAGE="${ECR_URL}:${GITHUB_SHA::8}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      # Segundo apply: actualiza el servicio ECS con la imagen real recien subida.
+      - name: Terraform apply - deploy image (dev)
+        working-directory: env/dev
+        run: terraform apply -auto-approve -input=false -var="container_image=${{ steps.build.outputs.image }}"
+
+      - name: Show app URL (dev)
+        working-directory: env/dev
+        run: terraform output -raw alb_url
+
+  # ---------------------------------------------------------------------------
+  # 4) DEPLOY PROD: requiere aprobacion manual (GitHub Environment "prod").
+  # ---------------------------------------------------------------------------
+  deploy-prod:
+    name: Deploy prod
+    needs: deploy-dev
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: prod # configurar required reviewers en GitHub -> approval manual
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ env.PROJECT_NAME }}-prod-gha-deploy
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform init (prod)
+        working-directory: env/prod
+        run: |
+          terraform init \
+            -backend-config="bucket=${PROJECT_NAME}-tfstate-prod-${{ secrets.AWS_ACCOUNT_ID }}"
+
+      - name: Terraform apply - infra (prod)
+        working-directory: env/prod
+        run: terraform apply -auto-approve -input=false
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & push image (prod)
+        id: build
+        working-directory: app
+        run: |
+          ECR_URL=$(cd ../env/prod && terraform output -raw ecr_repository_url)
+          IMAGE="${ECR_URL}:${GITHUB_SHA::8}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Terraform apply - deploy image (prod)
+        working-directory: env/prod
+        run: terraform apply -auto-approve -input=false -var="container_image=${{ steps.build.outputs.image }}"
+
+      - name: Show app URL (prod)
+        working-directory: env/prod
+        run: terraform output -raw alb_url
