@@ -35,6 +35,17 @@ resource "aws_vpc" "this" {
   }
 }
 
+# Restringe el SG por defecto de la VPC: sin reglas de ingress ni egress.
+# Nadie debe usar el SG default; forzamos que quede sin trafico permitido
+# (Zero Trust / CKV2_AWS_12).
+resource "aws_default_security_group" "this" {
+  vpc_id = aws_vpc.this.id
+
+  tags = {
+    Name = "${var.name_prefix}-default-sg-restricted"
+  }
+}
+
 resource "aws_internet_gateway" "this" {
   vpc_id = aws_vpc.this.id
 

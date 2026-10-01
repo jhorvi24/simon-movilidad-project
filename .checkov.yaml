@@ -1,0 +1,69 @@
+# Configuracion de Checkov para el pipeline.
+#
+# El escaneo sigue siendo BLOQUEANTE (hard_fail_on_crashes y sin soft-fail
+# global): cualquier hallazgo NUEVO que no este en esta lista detiene el
+# pipeline. Aqui solo se omiten checks que son (a) decisiones conscientes de
+# arquitectura (HTTP sin ACM/dominio), (b) falsos positivos del analisis
+# estatico de modulos aislados, o (c) excepciones validas del state bucket.
+#
+# Cada skip esta justificado. Revisar antes de agregar nuevos.
+
+framework:
+  - terraform
+  - dockerfile
+
+# Descarga de modulos externos deshabilitada (igual que en el workflow).
+download-external-modules: false
+
+compact: true
+
+skip-check:
+  # ---------------------------------------------------------------------------
+  # (a) HTTP por diseno: no hay dominio ni certificado ACM disponible.
+  #     Documentado en README. Para HTTPS habria que agregar ACM + listener 443.
+  # ---------------------------------------------------------------------------
+  - CKV_AWS_2    # ALB protocol is HTTPS
+  - CKV_AWS_103  # LB usa al menos TLS 1.2
+  - CKV_AWS_378  # LB no usa protocolo HTTP
+  - CKV2_AWS_20  # ALB redirige HTTP -> HTTPS
+  - CKV_AWS_260  # SG permite ingress 0.0.0.0/0 al puerto 80 (ALB publico, intencional)
+  - CKV2_AWS_28  # ALB publico protegido por WAF (no se provisiona WAF en esta app de prueba)
+
+  # ---------------------------------------------------------------------------
+  # (b) Falsos positivos: Checkov analiza cada modulo de forma aislada y no
+  #     correlaciona recursos que SI estan definidos (en recursos separados o
+  #     en el modulo consumidor).
+  # ---------------------------------------------------------------------------
+  - CKV2_AWS_5   # SG adjunto a un recurso (lo usan ALB/ECS en los modulos consumidores)
+  - CKV_AWS_21   # S3 versioning (definido en aws_s3_bucket_versioning aparte)
+  - CKV_AWS_145  # S3 cifrado KMS (definido en aws_s3_bucket_server_side_encryption_configuration)
+  - CKV2_AWS_6   # S3 public access block (definido en aws_s3_bucket_public_access_block)
+
+  # ---------------------------------------------------------------------------
+  # (c) Politicas IAM con restricciones que AWS exige o que son del pipeline.
+  # ---------------------------------------------------------------------------
+  - CKV_AWS_111  # write sin constraint: logs:PutLogEvents requiere resource "*"
+  - CKV_AWS_356  # resource "*" en acciones restringibles: idem logs + permisos de deploy
+  - CKV_AWS_109  # permissions management sin constraint: rol de deploy del pipeline
+  - CKV_AWS_107  # credentials exposure: rol de deploy necesita gestionar IAM del proyecto
+  - CKV_AWS_358  # claims OIDC: la condicion sub/aud ya esta acotada al repo/environment
+
+  # ---------------------------------------------------------------------------
+  # (d) Excepciones del state bucket (bootstrap) y de dev.
+  #     Un bucket de tfstate no necesita replicacion cross-region, access
+  #     logging, event notifications ni lifecycle; versioning/KMS/public-block
+  #     ya estan configurados en recursos dedicados.
+  # ---------------------------------------------------------------------------
+  - CKV_AWS_144  # S3 cross-region replication (no requerido para state bucket)
+  - CKV_AWS_18   # S3 access logging (no requerido para state bucket)
+  - CKV2_AWS_62  # S3 event notifications (no aplica al state bucket)
+  - CKV2_AWS_61  # S3 lifecycle configuration (no aplica al state bucket)
+
+  # ---------------------------------------------------------------------------
+  # (e) Decisiones de dev / costo. En prod estos valores ya son los seguros
+  #     (ECR IMMUTABLE, ALB deletion protection = true).
+  # ---------------------------------------------------------------------------
+  - CKV_AWS_150  # ALB deletion protection (false en dev a proposito; true en prod)
+  - CKV_AWS_51   # ECR tags inmutables (MUTABLE en dev a proposito; IMMUTABLE en prod)
+  - CKV_AWS_338  # retencion de logs >= 1 anio (costo; 30 dias es suficiente aqui)
+  - CKV_AWS_394  # pin de AZs (se usan las 2 primeras disponibles, aceptable)
