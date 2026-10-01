@@ -123,6 +123,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # PASO TEMPORAL DE DEBUG: imprime el "sub" real del token OIDC que GitHub
+      # emite para este job, para compararlo con el trust del rol en AWS.
+      # ELIMINAR una vez diagnosticado el problema de OIDC.
+      - name: Debug OIDC token sub (temporal)
+        run: |
+          TOKEN=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r '.value')
+          echo "github.repository = ${{ github.repository }}"
+          echo "----- claim sub del token OIDC -----"
+          echo "$TOKEN" | cut -d. -f2 | base64 -d 2>/dev/null | jq -r '.sub'
+
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
