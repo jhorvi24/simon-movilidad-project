@@ -74,7 +74,7 @@ module "ecs" {
   container_name           = "app"
   container_image          = local.container_image
   container_port           = var.container_port
-  readonly_root_filesystem = true
+  readonly_root_filesystem = false
   target_group_arn         = module.alb.target_group_arn
 
   # dev: recursos pequenos y escalado modesto
