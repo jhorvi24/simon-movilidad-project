@@ -74,6 +74,15 @@ resource "aws_ecs_task_definition" "this" {
       # Endurecimiento del contenedor (Zero Trust en runtime).
       readonlyRootFilesystem = var.readonly_root_filesystem
 
+      # Con readonlyRootFilesystem=true TODO el rootfs es de solo lectura,
+      # incluido /tmp. nginx necesita escribir el pid, los temporales y la
+      # cache. Montamos volumenes efimeros (tmpfs) escribibles en esas rutas.
+      mountPoints = var.readonly_root_filesystem ? [
+        { sourceVolume = "tmp", containerPath = "/tmp", readOnly = false },
+        { sourceVolume = "nginx-cache", containerPath = "/var/cache/nginx", readOnly = false },
+        { sourceVolume = "nginx-run", containerPath = "/var/run", readOnly = false },
+      ] : []
+
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -84,6 +93,16 @@ resource "aws_ecs_task_definition" "this" {
       }
     }
   ])
+
+  # Volumenes efimeros para las rutas escribibles que nginx necesita cuando el
+  # root filesystem es de solo lectura. Solo se declaran si el endurecimiento
+  # esta activo.
+  dynamic "volume" {
+    for_each = var.readonly_root_filesystem ? ["tmp", "nginx-cache", "nginx-run"] : []
+    content {
+      name = volume.value
+    }
+  }
 
   tags = {
     Name = "${var.name_prefix}-task"
