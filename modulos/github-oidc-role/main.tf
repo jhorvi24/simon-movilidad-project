@@ -16,7 +16,16 @@ locals {
   #   repo:<org>/<repo>:environment:<environment>
   #   repo:<org>/<repo>:ref:refs/heads/<branch>
   #   repo:<org>/<repo>:pull_request
-  github_subs = [for s in var.github_subject_claims : "repo:${var.github_repository}:${s}"]
+  #
+  # Algunas organizaciones activan los claims con IDs inmutables, y el "sub"
+  # llega como repo:<org>@<id>/<repo>@<id>:... En ese caso el nombre llano no
+  # hace match. Para tolerarlo insertamos un comodin "*" tras el owner y tras el
+  # repo, de modo que el patron acepte tanto el formato llano como el que trae
+  # los @<id>. StringLike soporta "*".
+  repo_parts    = split("/", var.github_repository)
+  repo_wildcard = "${local.repo_parts[0]}*/${local.repo_parts[1]}*"
+
+  github_subs = [for s in var.github_subject_claims : "repo:${local.repo_wildcard}:${s}"]
 }
 
 data "aws_iam_policy_document" "assume" {
