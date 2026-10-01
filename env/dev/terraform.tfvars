@@ -1,3 +1,3 @@
 # Valores del ambiente DEV.
-# IMPORTANTE: reemplaza el repositorio por el tuyo (<org>/<repo>).
-github_repository = "jhorvi24/simon-movilidad-project"
+# El rol de deploy OIDC (y su repo autorizado) se gestiona en bootstrap/,
+# no aqui. Este stack solo necesita sus defaults; no requiere variables extra.

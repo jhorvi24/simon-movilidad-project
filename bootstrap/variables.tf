@@ -9,3 +9,8 @@ variable "project_name" {
   type        = string
   default     = "simon-movilidad"
 }
+
+variable "github_repository" {
+  description = "Repositorio <org>/<repo> autorizado por OIDC para los roles de deploy."
+  type        = string
+}

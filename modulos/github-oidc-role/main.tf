@@ -1,55 +1,32 @@
 ###############################################################################
-# OIDC federation: GitHub Actions -> AWS (Zero Trust en credenciales)
+# Modulo: github-oidc-role
 #
-# En lugar de guardar AWS_ACCESS_KEY_ID / SECRET_ACCESS_KEY como secretos de
-# larga duracion en GitHub, GitHub Actions presenta un token OIDC firmado y
-# asume un rol de IAM para obtener credenciales TEMPORALES.
+# Crea UN rol de IAM que GitHub Actions asume via OIDC para desplegar un
+# ambiente. Este modulo contiene SOLO identidad (IAM): es barato, sin computo,
+# y por eso vive en el stack bootstrap/ (no en los stacks de infra de app).
 #
-# La relacion de confianza (assume_role_policy) restringe:
-#   - El emisor: token.actions.githubusercontent.com
-#   - La audiencia: sts.amazonaws.com
-#   - El "sub": solo el repo (y opcionalmente rama/environment) permitido.
-#
-# Asi, ni un token filtrado de otro repo puede asumir este rol.
+# Asi, crear la "llave" del pipeline NO obliga a aprovisionar VPC/ECS/ALB.
+# El pipeline, una vez tiene el rol, crea toda la infra de la app el mismo.
 ###############################################################################
 
 data "aws_caller_identity" "current" {}
 
-# El OIDC provider de GitHub. Se crea una sola vez por cuenta; por eso es
-# condicional: si ya existe, se pasa create_oidc_provider = false y se referencia
-# el existente vía var.existing_oidc_provider_arn.
-resource "aws_iam_openid_connect_provider" "github" {
-  count = var.create_oidc_provider ? 1 : 0
-
-  url            = "https://token.actions.githubusercontent.com"
-  client_id_list = ["sts.amazonaws.com"]
-  # Thumbprints de GitHub. AWS ya no los valida estrictamente para OIDC de IAM,
-  # pero el atributo sigue siendo requerido por el provider.
-  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
-
-  tags = {
-    Name = "${var.name_prefix}-github-oidc"
-  }
-}
-
 locals {
-  oidc_provider_arn = var.create_oidc_provider ? aws_iam_openid_connect_provider.github[0].arn : var.existing_oidc_provider_arn
-
-  # Construye los "sub" permitidos. Formato del sub de GitHub OIDC:
-  #   repo:<org>/<repo>:ref:refs/heads/<branch>
+  # Formato del sub de GitHub OIDC:
   #   repo:<org>/<repo>:environment:<environment>
+  #   repo:<org>/<repo>:ref:refs/heads/<branch>
   #   repo:<org>/<repo>:pull_request
   github_subs = [for s in var.github_subject_claims : "repo:${var.github_repository}:${s}"]
 }
 
-data "aws_iam_policy_document" "github_assume" {
+data "aws_iam_policy_document" "assume" {
   statement {
     effect  = "Allow"
     actions = ["sts:AssumeRoleWithWebIdentity"]
 
     principals {
       type        = "Federated"
-      identifiers = [local.oidc_provider_arn]
+      identifiers = [var.oidc_provider_arn]
     }
 
     condition {
@@ -66,9 +43,9 @@ data "aws_iam_policy_document" "github_assume" {
   }
 }
 
-resource "aws_iam_role" "github_actions" {
+resource "aws_iam_role" "this" {
   name                 = "${var.name_prefix}-gha-deploy"
-  assume_role_policy   = data.aws_iam_policy_document.github_assume.json
+  assume_role_policy   = data.aws_iam_policy_document.assume.json
   max_session_duration = 3600 # 1h: credenciales cortas (Zero Trust)
 
   tags = {
@@ -77,8 +54,7 @@ resource "aws_iam_role" "github_actions" {
 }
 
 # Permisos del pipeline: acotados a los servicios del proyecto (no Admin).
-data "aws_iam_policy_document" "github_actions_permissions" {
-  # Estado remoto en S3
+data "aws_iam_policy_document" "permissions" {
   statement {
     sid    = "TerraformState"
     effect = "Allow"
@@ -94,7 +70,6 @@ data "aws_iam_policy_document" "github_actions_permissions" {
     ]
   }
 
-  # ECR: push/pull de imagenes
   statement {
     sid    = "ECR"
     effect = "Allow"
@@ -120,7 +95,6 @@ data "aws_iam_policy_document" "github_actions_permissions" {
     resources = ["*"]
   }
 
-  # Infra de la app: VPC, ECS, ALB, Auto Scaling, Logs
   statement {
     sid    = "AppInfra"
     effect = "Allow"
@@ -136,7 +110,6 @@ data "aws_iam_policy_document" "github_actions_permissions" {
     resources = ["*"]
   }
 
-  # IAM: solo para gestionar los roles/policies del propio proyecto (prefijo).
   statement {
     sid    = "ScopedIAM"
     effect = "Allow"
@@ -162,8 +135,8 @@ data "aws_iam_policy_document" "github_actions_permissions" {
   }
 }
 
-resource "aws_iam_role_policy" "github_actions" {
+resource "aws_iam_role_policy" "this" {
   name   = "${var.name_prefix}-gha-deploy-policy"
-  role   = aws_iam_role.github_actions.id
-  policy = data.aws_iam_policy_document.github_actions_permissions.json
+  role   = aws_iam_role.this.id
+  policy = data.aws_iam_policy_document.permissions.json
 }

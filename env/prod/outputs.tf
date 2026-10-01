@@ -17,8 +17,3 @@ output "ecs_service_name" {
   description = "Nombre del servicio ECS."
   value       = module.ecs.service_name
 }
-
-output "github_actions_role_arn" {
-  description = "ARN del rol que asume GitHub Actions via OIDC."
-  value       = module.iam.github_actions_role_arn
-}

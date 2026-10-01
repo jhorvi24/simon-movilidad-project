@@ -28,7 +28,4 @@ variable "container_image" {
   default     = ""
 }
 
-variable "github_repository" {
-  description = "Repositorio <org>/<repo> autorizado por OIDC."
-  type        = string
-}
+
