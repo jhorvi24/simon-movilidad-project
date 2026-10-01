@@ -41,6 +41,9 @@ resource "aws_lb_target_group" "this" {
   vpc_id      = var.vpc_id
   target_type = "ip" # requerido para Fargate (awsvpc)
 
+  # Draining mas corto que el default (300s) para reciclar targets rapido.
+  deregistration_delay = 30
+
   health_check {
     enabled             = true
     path                = var.health_check_path

@@ -73,6 +73,12 @@ variable "desired_count" {
   default     = 2
 }
 
+variable "health_check_grace_period_seconds" {
+  description = "Segundos de gracia tras arrancar la tarea antes de evaluar el health check del ALB."
+  type        = number
+  default     = 120
+}
+
 # ---- ALB --------------------------------------------------------------------
 variable "target_group_arn" {
   description = "ARN del target group del ALB al que se registran las tareas."

@@ -120,6 +120,11 @@ resource "aws_ecs_service" "this" {
   deployment_minimum_healthy_percent = 100
   deployment_maximum_percent         = 200
 
+  # Margen para que la tarea arranque antes de que el health check del ALB
+  # empiece a contar fallos. Sin esto, ECS puede matar la tarea mientras nginx
+  # aun se esta registrando.
+  health_check_grace_period_seconds = var.health_check_grace_period_seconds
+
   deployment_circuit_breaker {
     enable   = true
     rollback = true
